@@ -1,1 +1,1 @@
-A simple rasterizer triangle rasterizer.
+A simple triangle rasterizer.
