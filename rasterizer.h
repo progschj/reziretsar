@@ -9,30 +9,31 @@ typedef struct {
 
 /*
  * rasterizer_init initializes a reasterizer with a width x height render
- * target
+ * target.
  */
 int rasterizer_init(rasterizer *r, int width, int height);
 
 /*
- * rasterizer_free deallocates rasterizer resources
+ * rasterizer_free deallocates rasterizer resources.
  */
 void rasterizer_free(rasterizer *r);
 
 /*
- * rasterizer_clear sets all pixels z values to depth and pixel values.
+ * rasterizer_clear sets all pixels z values to depth and pixel values
+ * to value.
  */
 void rasterizer_clear(rasterizer *r, float depth, uint32_t value);
 
 /*
  * rasterizer_draw_array draws an array of triangles
- * 
+ *
  * Draws triangles sourced from count vertices.
  * The j-th component of the i-th vertex is fetched from
  * vertices[stride*i+j]. If components<4 the unspecified components
  * default to (0, 0, 0, 1).
  * The values written to the pixels are value+k*increment for the k-th
  * triangle.
- * 
+ *
  * parameters:
  *      vertices - pointer to the first vertex
  *      components - specified components per vertex
@@ -43,7 +44,7 @@ void rasterizer_clear(rasterizer *r, float depth, uint32_t value);
  *      transform - 4x4 column major matrix transform applied to the vertices
  *
  * return value:
- *      returns the amount of drawn pixels (on screen and passed 
+ *      returns the amount of drawn pixels (on screen and passed
  *      the depth test).
  */
 
