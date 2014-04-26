@@ -71,7 +71,7 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
     float y3 = v3[1];
     float z3 = v3[2];
 
-    // calculate barycentric increments
+    // calculate barycentric increments and bases
     float a1 = (y2-y3);
     float b1 = (x3-x2);
     float a2 = (y3-y1);
@@ -81,12 +81,12 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
     b1 *= invdet;
     a2 *= invdet;
     b2 *= invdet;
-    float a3 = -(a1 + a2);
-    float b3 = -(b1 + b2);
+    float bary01 = -(x3-0.5f)*a1 - (y3-0.5f)*b1;
+    float bary02 = -(x3-0.5f)*a2 - (y3-0.5f)*b2;
 
     // calculate z increments
-    float dzx = a1*z1 + a2*z2 + a3*z3;
-    float dzy = b1*z1 + b2*z2 + b3*z3 - tilex*dzx;
+    float dzx = a1*z1 + a2*z2 - (a1 + a2)*z3;
+    float dzy = b1*z1 + b2*z2 - (b1 + b2)*z3 - tilex*dzx;
 
     // premultiplied increments for unrolled loop
     float dzx1 = 1*dzx;
@@ -167,8 +167,8 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
 
             //check if triangle touches the tile at (x0, y0)
             if(dot1>=out1 && dot2>=out2 && dot3>=out3) {
-                float bary1 = x0*a1 + y0*b1 - (x3*a1 + y3*b1);
-                float bary2 = x0*a2 + y0*b2 - (x3*a2 + y3*b2);
+                float bary1 = x0*a1 + y0*b1 + bary01;
+                float bary2 = x0*a2 + y0*b2 + bary02;
                 float bary3 = 1.0f - bary1 - bary2;
                 float z = bary1*z1 + bary2*z2 + bary3*z3;
 
@@ -366,7 +366,7 @@ int rasterizer_draw_array(rasterizer *r, const float *vertices, int components, 
 
         // clip triangle
         int polyverts = 3;
-        for(int k = 0;k<6x;++k){
+        for(int k = 0;k<6;++k){
             polyverts = clip_polygon(clipped, transformed, polyverts, clip_planes+5*k);
             float *tmp = transformed; transformed = clipped; clipped = tmp;
         }
