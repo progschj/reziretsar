@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <stdio.h>
 
 #include "rasterizer.h"
 
@@ -38,7 +39,7 @@ static inline int imin(int a, int b) {
 static inline int imax(int a, int b) {
     return a>b?a:b;
 }
-static float lerp(float a, float b, float s) {
+static double lerp(double a, double b, double s) {
     return a+(b-a)*s;
 }
 
@@ -284,17 +285,17 @@ static void transform_vertex2(float *dest, int width, int height) {
     dest[3] = invw;
 }
 
-static int clip_polygon(float *dest, const float *src, int n, const float *plane) {
+static int clip_polygon(float *dest, const float *src, int n, const double *plane) {
     // clip a polygon against a plane by walking along the edges and
     // determining inside and intersection points along the way
-    const float *normal = plane;
-    float p = plane[4];
+    const double *normal = plane;
+    double p = plane[4];
     int out = 0;
     const float *a = src+4*(n-1);
-    float aa = a[0]*normal[0] + a[1]*normal[1] + a[2]*normal[2] + a[3]*normal[3];
+    double aa = a[0]*normal[0] + a[1]*normal[1] + a[2]*normal[2] + a[3]*normal[3];
     for(int i = 0;i<n;++i) {
         const float *b = src+4*i;
-        float bb = b[0]*normal[0] + b[1]*normal[1] + b[2]*normal[2] + b[3]*normal[3];
+        double bb = b[0]*normal[0] + b[1]*normal[1] + b[2]*normal[2] + b[3]*normal[3];
 
         if(aa>=p) {
             if(bb>=p) {
@@ -308,7 +309,7 @@ static int clip_polygon(float *dest, const float *src, int n, const float *plane
             } else {
                 // starting point inside & end point outside:
                 // add the intersection point
-                float s = (p-aa)/(bb-aa);
+                double s = (p-aa)/(bb-aa);
                 dest[4*out+0] = lerp(a[0], b[0], s);
                 dest[4*out+1] = lerp(a[1], b[1], s);
                 dest[4*out+2] = lerp(a[2], b[2], s);
@@ -319,7 +320,7 @@ static int clip_polygon(float *dest, const float *src, int n, const float *plane
             if(bb>=p) {
                 // starting point outside & end point inside
                 // add the intersection point and the end point
-                float s = (p-aa)/(bb-aa);
+                double s = (p-aa)/(bb-aa);
                 dest[4*out+0] = lerp(a[0], b[0], s);
                 dest[4*out+1] = lerp(a[1], b[1], s);
                 dest[4*out+2] = lerp(a[2], b[2], s);
@@ -342,13 +343,13 @@ static int clip_polygon(float *dest, const float *src, int n, const float *plane
     return out;
 }
 
-static const float clip_planes[] = {
-    1.0f,  0.0f,  0.0f,  1.0f,  0.0f, // x >= -w
-   -1.0f,  0.0f,  0.0f,  1.0f,  0.0f, // x <=  w
-    0.0f,  1.0f,  0.0f,  1.0f,  0.0f, // y >= -w
-    0.0f, -1.0f,  0.0f,  1.0f,  0.0f, // y <=  w
-    0.0f,  0.0f,  1.0f,  1.0f,  0.0f, // z >= -w
-    0.0f,  0.0f, -1.0f,  1.0f,  0.0f, // z <=  w
+static const double clip_planes[] = {
+    1.0,  0.0,  0.0,  1.0,  0.0, // x >= -w
+   -1.0,  0.0,  0.0,  1.0,  0.0, // x <=  w
+    0.0,  1.0,  0.0,  1.0,  0.0, // y >= -w
+    0.0, -1.0,  0.0,  1.0,  0.0, // y <=  w
+    0.0,  0.0,  1.0,  1.0,  0.0, // z >= -w
+    0.0,  0.0, -1.0,  1.0,  0.0, // z <=  w
 };
 
 int rasterizer_draw_array(rasterizer *r, const float *vertices, int components, int stride, int count, uint32_t value, uint32_t increment, float *transform) {
@@ -370,7 +371,6 @@ int rasterizer_draw_array(rasterizer *r, const float *vertices, int components, 
             polyverts = clip_polygon(clipped, transformed, polyverts, clip_planes+5*k);
             float *tmp = transformed; transformed = clipped; clipped = tmp;
         }
-
         // transform the resulting polygon to screen space
         for(int j = 0;j<polyverts;++j) {
             transform_vertex2(transformed + 4*j, r->width, r->height);
