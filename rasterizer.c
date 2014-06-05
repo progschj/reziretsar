@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
-#include <stdio.h>
 
 #include "rasterizer.h"
 
@@ -50,6 +49,8 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
     // shift specifies the subpixel precision of the rasterizer
     const int shift = 4;
     const float factor = 1<<shift;
+    const float inv_factor = 1.0f/factor;
+
 
     int width = target->pitch;
     int height = target->height;
@@ -60,40 +61,17 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
     int passed = 0;
 
     // fetch vertex positions
-    float x1 = v1[0];
-    float y1 = v1[1];
+    float x1 = v1[0]-0.5f;
+    float y1 = v1[1]-0.5f;
     float z1 = v1[2];
 
-    float x2 = v2[0];
-    float y2 = v2[1];
+    float x2 = v2[0]-0.5f;
+    float y2 = v2[1]-0.5f;
     float z2 = v2[2];
 
-    float x3 = v3[0];
-    float y3 = v3[1];
+    float x3 = v3[0]-0.5f;
+    float y3 = v3[1]-0.5f;
     float z3 = v3[2];
-
-    // calculate barycentric increments and bases
-    float a1 = (y2-y3);
-    float b1 = (x3-x2);
-    float a2 = (y3-y1);
-    float b2 = (x1-x3);
-    float invdet = 1.0f/(a1*b2 - a2*b1);
-    a1 *= invdet;
-    b1 *= invdet;
-    a2 *= invdet;
-    b2 *= invdet;
-    float bary01 = -(x3-0.5f)*a1 - (y3-0.5f)*b1;
-    float bary02 = -(x3-0.5f)*a2 - (y3-0.5f)*b2;
-
-    // calculate z increments
-    float dzx = a1*z1 + a2*z2 - (a1 + a2)*z3;
-    float dzy = b1*z1 + b2*z2 - (b1 + b2)*z3 - tilex*dzx;
-
-    // premultiplied increments for unrolled loop
-    float dzx1 = 1*dzx;
-    float dzx2 = 2*dzx;
-    float dzx3 = 3*dzx;
-    float dzx4 = 4*dzx;
 
     // convert positions to fixed point
     int ix1 = floorf(factor*x1);
@@ -116,6 +94,36 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
         return 0;
     }
 
+    x1 = ix1*inv_factor;
+    y1 = iy1*inv_factor;
+    x2 = ix2*inv_factor;
+    y2 = iy2*inv_factor;
+    x3 = ix3*inv_factor;
+    y3 = iy3*inv_factor;
+
+    // calculate barycentric increments and bases
+    float a1 = (y2-y3);
+    float b1 = (x3-x2);
+    float a2 = (y3-y1);
+    float b2 = (x1-x3);
+    float invdet = 1.0f/(a1*b2 - a2*b1);
+    a1 *= invdet;
+    b1 *= invdet;
+    a2 *= invdet;
+    b2 *= invdet;
+    float bary01 = -x3*a1 - y3*b1;
+    float bary02 = -x3*a2 - y3*b2;
+
+    // calculate z increments
+    float dzx = a1*z1 + a2*z2 - (a1 + a2)*z3;
+    float dzy = b1*z1 + b2*z2 - (b1 + b2)*z3 - tilex*dzx;
+
+    // premultiplied increments for unrolled loop
+    float dzx1 = 1*dzx;
+    float dzx2 = 2*dzx;
+    float dzx3 = 3*dzx;
+    float dzx4 = 4*dzx;
+
     // determine bounds of the triangle and clamp to screen size
     int xmin = imax(0, imin(ix1, imin(ix2, ix3))>>shift);
     int ymin = imax(0, imin(iy1, imin(iy2, iy3))>>shift);
@@ -127,15 +135,6 @@ static int draw_triangle(rasterizer *target, const float *v1, const float *v2, c
     ymin &= ~(tiley-1);
     xmax = (xmax+tilex) & ~(tilex-1);
     ymax = (ymax+tiley) & ~(tiley-1);
-
-    // subtract half a pixel so pixel centers are checked against the
-    // half spaces
-    ix1 -= 1<<(shift-1);
-    ix2 -= 1<<(shift-1);
-    ix3 -= 1<<(shift-1);
-    iy1 -= 1<<(shift-1);
-    iy2 -= 1<<(shift-1);
-    iy3 -= 1<<(shift-1);
 
     // half space (plane) offsets
     int c1 = ix1*nx1 + iy1*ny1 + (nx1+ny1==0?(nx1-ny1>0?1:0):(nx1+ny1>0?0:1));
