@@ -284,17 +284,17 @@ static void transform_vertex2(float *dest, int width, int height) {
     dest[3] = invw;
 }
 
-static int clip_polygon(float *dest, const float *src, int n, const double *plane) {
+static int clip_polygon(float *dest, const float *src, int n, const float *plane) {
     // clip a polygon against a plane by walking along the edges and
     // determining inside and intersection points along the way
-    const double *normal = plane;
-    double p = plane[4];
+    const float *normal = plane;
+    float p = plane[4];
     int out = 0;
     const float *a = src+4*(n-1);
-    double aa = a[0]*normal[0] + a[1]*normal[1] + a[2]*normal[2] + a[3]*normal[3];
+    float aa = a[0]*normal[0] + a[1]*normal[1] + a[2]*normal[2] + a[3]*normal[3];
     for(int i = 0;i<n;++i) {
         const float *b = src+4*i;
-        double bb = b[0]*normal[0] + b[1]*normal[1] + b[2]*normal[2] + b[3]*normal[3];
+        float bb = b[0]*normal[0] + b[1]*normal[1] + b[2]*normal[2] + b[3]*normal[3];
 
         if(aa>=p) {
             if(bb>=p) {
@@ -308,18 +308,19 @@ static int clip_polygon(float *dest, const float *src, int n, const double *plan
             } else {
                 // starting point inside & end point outside:
                 // add the intersection point
-                double s = (p-aa)/(bb-aa);
-                dest[4*out+0] = lerp(a[0], b[0], s);
-                dest[4*out+1] = lerp(a[1], b[1], s);
-                dest[4*out+2] = lerp(a[2], b[2], s);
-                dest[4*out+3] = lerp(a[3], b[3], s);
+                //~ float s = (p-aa)/(bb-aa);
+                float s = (p-bb)/(aa-bb);
+                dest[4*out+0] = lerp(b[0], a[0], s);
+                dest[4*out+1] = lerp(b[1], a[1], s);
+                dest[4*out+2] = lerp(b[2], a[2], s);
+                dest[4*out+3] = lerp(b[3], a[3], s);
                 ++out;
             }
         } else {
             if(bb>=p) {
                 // starting point outside & end point inside
                 // add the intersection point and the end point
-                double s = (p-aa)/(bb-aa);
+                float s = (p-aa)/(bb-aa);
                 dest[4*out+0] = lerp(a[0], b[0], s);
                 dest[4*out+1] = lerp(a[1], b[1], s);
                 dest[4*out+2] = lerp(a[2], b[2], s);
@@ -342,7 +343,7 @@ static int clip_polygon(float *dest, const float *src, int n, const double *plan
     return out;
 }
 
-static const double clip_planes[] = {
+static const float clip_planes[] = {
     1.0,  0.0,  0.0,  1.0,  0.0, // x >= -w
    -1.0,  0.0,  0.0,  1.0,  0.0, // x <=  w
     0.0,  1.0,  0.0,  1.0,  0.0, // y >= -w
